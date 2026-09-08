@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Watch — soil moisture monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --soil: #7A5B3E;
+    --leaf: #5E8F44;
+    --leaf-dark: #3E5F2C;
+    --paper: #EFE9DA;
+    --card: #FBF8F1;
+    --ink: #26301F;
+    --ink-soft: #5A5F4E;
+    --clay: #BF5330;
+    --line: #DCD4BE;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', sans-serif;
+    line-height: 1.5;
+  }
+
+  h1,h2,h3{
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .wrap{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- header ---------- */
+  header.wrap{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Fraunces', serif;
+    font-size: 20px;
+    font-weight:600;
+    color: var(--leaf-dark);
+  }
+  .brand svg{ width:26px; height:26px; }
+  .clock{
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items:center;
+    padding: 24px 0 64px;
+  }
+  .hero h1{
+    font-size: clamp(34px, 4.4vw, 52px);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    max-width: 15ch;
+  }
+  .hero p{
+    max-width: 46ch;
+    color: var(--ink-soft);
+    font-size: 16.5px;
+    margin-top: 18px;
+  }
+  .hero-meta{
+    display:flex;
+    gap: 28px;
+    margin-top: 30px;
+  }
+  .hero-meta div{ }
+  .hero-meta .num{
+    font-family:'Fraunces', serif;
+    font-size: 28px;
+    color: var(--leaf-dark);
+  }
+  .hero-meta .lbl{
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  /* gauge */
+  .gauge-card{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 30px;
+    text-align:center;
+    box-shadow: 0 20px 40px -28px rgba(62,95,44,0.35);
+  }
+  .gauge-card .status-tag{
+    display:inline-block;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+    background: rgba(94,143,68,0.14);
+    color: var(--leaf-dark);
+  }
+  .gauge-card.needs .status-tag{
+    background: rgba(191,83,48,0.14);
+    color: var(--clay);
+  }
+  .gauge-wrap{ position:relative; width:220px; height:220px; margin: 0 auto; }
+  .gauge-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
+  .gauge-bg{ fill:none; stroke: var(--line); stroke-width: 14; }
+  .gauge-fg{ fill:none; stroke: var(--leaf); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
+  .gauge-card.needs .gauge-fg{ stroke: var(--clay); }
+  .gauge-center{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .gauge-center .pct{ font-family:'Fraunces', serif; font-size: 42px; color: var(--ink); }
+  .gauge-center .who{ font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+  .gauge-card .verdict{
+    margin-top: 18px;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .gauge-card .plant-name{
+    font-size: 21px;
+    margin-top: 4px;
+  }
+  .gauge-card .loc{
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    margin-bottom: 4px;
+  }
+  .gauge-card .spark{
+    margin-top: 20px;
+  }
+  .editable{
+    outline: none;
+    border-radius: 4px;
+    padding: 1px 3px;
+    margin: -1px -3px;
+    cursor: text;
+  }
+  .editable:hover{ background: rgba(94,143,68,0.08); }
+  .editable:focus{ background: rgba(94,143,68,0.12); box-shadow: 0 0 0 1px var(--leaf); }
+
+  .spark{ width:100%; height:44px; display:block; }
+
+  /* ---------- notification toast ---------- */
+  #toast{
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: #F1EDE0;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- hookup note ---------- */
+  .hookup{
+    border-top: 1px solid var(--line);
+    padding: 44px 0 60px;
+  }
+  .hookup .inner{
+    display:grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 44px;
+  }
+  .hookup h2{ font-size: 22px; margin-bottom: 14px; }
+  .hookup p{ color: var(--ink-soft); font-size: 15px; }
+  .steps{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap: 14px; }
+  .steps li{
+    display:flex;
+    gap: 14px;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+  .steps .n{
+    font-family:'Fraunces', serif;
+    color: var(--leaf-dark);
+    font-size: 15px;
+    flex-shrink:0;
+  }
+
+  footer{
+    text-align:center;
+    padding: 26px 0 40px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 820px){
+    .hero{ grid-template-columns: 1fr; }
+    .hookup .inner{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21c-4-1-6-4.5-6-9 3 0 6 1.5 6 5 0-3.5 3-5 6-5 0 4.5-2 8-6 9z"/><path d="M12 21V9"/></svg>
+    Plant Watch
+  </div>
+  <div class="clock" id="clock"></div>
+</header>
+
+<section class="wrap hero">
+  <div>
+    <h1>Know before the leaves start to droop</h1>
+    <p>A soil sensor checks moisture around the clock. When the pot runs dry, you get a warning here and on your phone — so you know it's time to water, without guessing.</p>
+    <div class="hero-meta">
+      <div>
+        <div class="num" id="statusNum">—</div>
+        <div class="lbl">current status</div>
+      </div>
+      <div>
+        <div class="num">10s</div>
+        <div class="lbl">check interval</div>
+      </div>
+      <div>
+        <div class="num" id="connStatus">Demo</div>
+        <div class="lbl">sensor connection</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gauge-card" id="heroGauge">
+    <div class="status-tag" id="heroTag">All good</div>
+
+    <h3 class="editable plant-name" contenteditable="true" spellcheck="false" data-field="name" id="nameField"></h3>
+    <div class="loc editable" contenteditable="true" spellcheck="false" data-field="loc" id="locField"></div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 220">
+        <circle class="gauge-bg" cx="110" cy="110" r="92"></circle>
+        <circle class="gauge-fg" id="heroArc" cx="110" cy="110" r="92" stroke-dasharray="578" stroke-dashoffset="578"></circle>
+      </svg>
+      <div class="gauge-center">
+        <div class="pct" id="heroPct">—</div>
+        <div class="who">soil moisture</div>
+      </div>
+    </div>
+    <div class="verdict" id="heroVerdict">Reading sensor…</div>
+
+    <svg class="spark" viewBox="0 0 200 44" preserveAspectRatio="none" id="heroSpark">
+      <path fill="none" stroke="#5E8F44" stroke-width="2"/>
+    </svg>
+  </div>
+</section>
+
+<section class="hookup">
+  <div class="wrap inner">
+    <div>
+      <h2>This is a live demo</h2>
+      <p>Readings above are simulated so you can see how the dashboard behaves. Wire it to a real pot and the same layout works with actual sensor data.</p>
+    </div>
+    <ol class="steps">
+      <li><span class="n">1</span> Connect a capacitive soil moisture sensor to an ESP32 (it has WiFi built in, so no separate bridge device is needed).</li>
+      <li><span class="n">2</span> The ESP32 reads moisture every few minutes and pushes the value to a small cloud database (Firebase's free tier is enough for this).</li>
+      <li><span class="n">3</span> This page reads from that same database instead of the simulator, so the numbers you see are the real pot.</li>
+      <li><span class="n">4</span> When moisture drops below your threshold, the ESP32 can send a push notification to your phone via a service like Pushover.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>Plant Watch — a demo dashboard. Swap the simulator for your sensor feed when your hardware is ready.</footer>
+
+<div id="toast"></div>
+
+<script>
+  // ---- clock ----
+  function tickClock(){
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---- plant model ----
+  const THRESHOLD = 30; // below this % => needs water
+
+  const plant = {
+    name: 'My plant',
+    loc: 'Tap to add a location',
+    moisture: 58,
+    history: [],
+    dropRate: 0.35,
+  };
+
+  for (let i=0;i<20;i++) plant.history.push(clamp(plant.moisture + (Math.random()*6-3)));
+
+  function clamp(v){ return Math.max(4, Math.min(96, v)); }
+
+  function sparkPath(history, w, h){
+    const min = Math.min(...history), max = Math.max(...history);
+    const range = (max - min) || 1;
+    const step = w / (history.length - 1);
+    return history.map((v,i) => {
+      const x = i * step;
+      const y = h - ((v - min) / range) * (h - 6) - 3;
+      return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+  }
+
+  function render(){
+    const low = plant.moisture < THRESHOLD;
+
+    document.getElementById('nameField').textContent = plant.name;
+    document.getElementById('locField').textContent = plant.loc;
+    document.getElementById('statusNum').textContent = low ? 'Too dry' : 'Watered enough';
+
+    const circumference = 578;
+    const offset = circumference - (plant.moisture/100)*circumference;
+    document.getElementById('heroArc').style.strokeDashoffset = offset;
+    document.getElementById('heroPct').textContent = Math.round(plant.moisture) + '%';
+
+    document.querySelector('#heroSpark path').setAttribute('d', sparkPath(plant.history, 200, 44));
+    document.querySelector('#heroSpark path').setAttribute('stroke', low ? '#BF5330' : '#5E8F44');
+
+    const heroGauge = document.getElementById('heroGauge');
+    const heroTag = document.getElementById('heroTag');
+    const heroVerdict = document.getElementById('heroVerdict');
+    if (low){
+      heroGauge.classList.add('needs');
+      heroTag.textContent = 'Needs water';
+      heroVerdict.textContent = 'Soil is running dry — time to water.';
+    } else {
+      heroGauge.classList.remove('needs');
+      heroTag.textContent = 'All good';
+      heroVerdict.textContent = 'Moisture is holding steady.';
+    }
+
+    document.getElementById('connStatus').textContent = bridgeConnected ? 'Live sensor' : 'Demo';
+  }
+
+  // bind editable name/location fields once
+  ['nameField','locField'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('blur', () => {
+      const text = el.textContent.trim();
+      const field = el.dataset.field;
+      plant[field] = text || (field === 'name' ? 'Unnamed plant' : 'Tap to add a location');
+      el.textContent = plant[field];
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); el.blur(); }
+    });
+  });
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // ---- simulate live sensor drift (fallback when no real sensor is connected) ----
+  function driftPlant(){
+    if (bridgeConnected) return; // real sensor updates handled separately
+    const wasLow = plant.moisture < THRESHOLD;
+    plant.moisture = clamp(plant.moisture - plant.dropRate - Math.random()*0.4);
+    plant.history.push(plant.moisture);
+    if (plant.history.length > 24) plant.history.shift();
+    if (!wasLow && plant.moisture < THRESHOLD){
+      showToast(plant.name + ' is running low — time to water');
+    }
+    render();
+  }
+
+  // ---- real sensor bridge ----
+  // Point BRIDGE_URL at your bridge.py server. If it can't be reached, the
+  // dashboard just keeps using simulated data so it still works standalone.
+  const BRIDGE_URL = 'http://localhost:5000';
+  let bridgeConnected = false;
+
+  async function pollBridge(){
+    try {
+      const res = await fetch(BRIDGE_URL + '/data', { cache: 'no-store' });
+      if (!res.ok) throw new Error('bad response');
+      const data = await res.json();
+      if (data.moisture === null || data.moisture === undefined) return;
+
+      bridgeConnected = true;
+      const wasLow = plant.moisture < THRESHOLD;
+      plant.moisture = clamp(data.moisture);
+      plant.history.push(plant.moisture);
+      if (plant.history.length > 24) plant.history.shift();
+      if (!wasLow && plant.moisture < THRESHOLD){
+        showToast(plant.name + ' is running low — time to water');
+      }
+      render();
+    } catch (err) {
+      bridgeConnected = false;
+      // silently fall back — driftPlant() keeps the demo moving
+    }
+  }
+
+  render();
+  setInterval(driftPlant, 10000);
+  setInterval(pollBridge, 3000);
+  pollBridge();
+</script>
+
+</body>
+</html>
